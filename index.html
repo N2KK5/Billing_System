@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Billing System</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<link rel="stylesheet"
+href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+    @keyframes fade {
+0%{opacity:0; transform:translateY(-10px);}
+100%{opacity:1; transform:translateY(0);}
+}
+
+.animate-fade{
+animation:fade 0.2s ease;
+}
+
+</style>
+</head>
+
+<body class="bg-gray-100 min-h-screen p-4 md:p-8">
+
+<div class="max-w-5xl mx-auto space-y-6">
+
+<div class="text-center space-y-1">
+
+<h1 class="text-3xl font-bold flex justify-center items-center gap-2">
+<i class="bi bi-receipt text-indigo-700"></i>
+Rani Electrical
+</h1>
+
+<p class="text-gray-500 text-sm">
+Billing System
+</p>
+
+</div>
+
+<div id="message"
+class="hidden fixed top-6 right-6 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 z-50">
+
+<i class="bi bi-check-circle-fill text-green-400 text-xl"></i>
+
+<span id="messageText"></span>
+
+</div>
+
+<div class="bg-white shadow-lg rounded-xl p-6 space-y-5">
+
+<h2 class="text-lg font-semibold text-gray-700 flex items-center gap-2">
+<i class="bi bi-cart3 text-indigo-600"></i>
+Create Bill
+</h2>
+
+<div class="grid md:grid-cols-2 gap-4">
+
+<div>
+<label class="text-sm font-medium text-gray-600">Add Customer</label>
+<div class="flex gap-2 mt-1">
+<input id="newCustomer"
+placeholder="Enter customer name"
+class="border rounded p-2 w-full">
+
+<button onclick="addCustomer()"
+class="bg-indigo-600 text-white px-4 rounded hover:bg-indigo-700">
+<i class="bi bi-person-plus"></i>
+</button>
+</div>
+</div>
+
+<div>
+
+<label class="text-sm font-medium text-gray-600">
+Select Customer <span class="text-red-500">*</span>
+</label>
+
+<div class="flex gap-2 mt-1">
+
+<select id="customer"
+class="border rounded p-2 w-full">
+
+<option value="">Choose Customer</option>
+
+</select>
+
+<button
+onclick="deleteSelectedCustomer()"
+class="bg-red-500 text-white px-3 rounded">
+
+<i class="bi bi-trash"></i>
+
+</button>
+
+</div>
+
+</div>
+</div>
+
+<div class="flex justify-between items-center">
+<h3 class="font-semibold text-gray-700">Items</h3>
+
+<button onclick="addItemRow()"
+class="bg-indigo-600 text-white px-4 py-2 rounded flex items-center gap-2">
+<i class="bi bi-plus-circle"></i>
+Add Item
+</button>
+</div>
+
+<div id="items" class="space-y-4"></div>
+
+<div class="flex justify-between items-center border-t pt-4">
+<p class="text-lg font-semibold text-gray-700">
+Grand Total
+</p>
+
+<p class="text-xl font-bold text-green-600">
+₹ <span id="grandTotal">0</span>
+</p>
+</div>
+
+<div class="text-right">
+<button onclick="saveBill()"
+class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 inline-flex">
+<i class="bi bi-save"></i>
+Save / Update Bill
+</button>
+</div>
+
+</div>
+
+<div class="bg-white shadow rounded-xl p-6">
+
+<h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-700">
+<i class="bi bi-journal-text text-indigo-600"></i>
+Saved Bills
+</h2>
+
+<div class="overflow-x-auto">
+
+<table class="w-full text-sm">
+
+<thead class="bg-indigo-600 text-white">
+
+<tr>
+<th class="p-3 text-left">Bill No</th>
+<th class="p-3 text-left">Last Updated</th>
+<th class="p-3 text-left">Customer</th>
+<th class="p-3 text-left">Total</th>
+<th class="p-3 text-center">Actions</th>
+</tr>
+
+</thead>
+
+<tbody id="billTable"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+let bills = JSON.parse(localStorage.getItem("bills")) || [];
+let customers = JSON.parse(localStorage.getItem("customers")) || [];
+let editingBillId = null;
+
+/* ADD CUSTOMER */
+
+function addCustomer(){
+
+const name=document.getElementById("newCustomer").value.trim();
+
+if(!name){
+showMessage("Enter customer name");
+return;
+}
+
+if(customers.includes(name)){
+showMessage("Customer already exists");
+return;
+}
+
+customers.push(name);
+
+localStorage.setItem(
+"customers",
+JSON.stringify(customers)
+);
+
+document.getElementById("newCustomer").value="";
+
+loadCustomers();
+
+showMessage("Customer added successfully");
+
+}
+/* LOAD CUSTOMERS */
+
+function loadCustomers(){
+
+const select=document.getElementById("customer");
+
+select.innerHTML =
+'<option value="">Choose Customer</option>';
+
+customers.forEach(c=>{
+
+const option=document.createElement("option");
+
+option.value=c;
+
+option.textContent=c;
+
+select.appendChild(option);
+
+});
+
+}
+
+/* Delete customers */
+
+function deleteSelectedCustomer(){
+
+const select=document.getElementById("customer");
+
+const name=select.value;
+
+if(!name){
+showMessage("Select customer");
+return;
+}
+
+customers=customers.filter(c=>c!==name);
+
+localStorage.setItem(
+"customers",
+JSON.stringify(customers)
+);
+
+loadCustomers();
+
+showMessage("Customer deleted");
+
+}
+
+/* ADD ITEM */
+
+function addItemRow(item=null){
+
+const container=document.getElementById("items");
+const row=document.createElement("div");
+row.className="border p-3 rounded";
+
+row.innerHTML=`
+
+<div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+
+<div>
+<label class="text-xs text-gray-500">
+Item Name <span class="text-red-500">*</span>
+</label>
+<input required
+class="border p-2 rounded w-full item"
+value="${item?.item || ''}">
+</div>
+
+<div>
+<label class="text-xs text-gray-500">
+Qty <span class="text-red-500">*</span>
+</label>
+<input type="number" required
+class="border p-2 rounded w-full qty"
+value="${item?.qty || ''}">
+</div>
+
+<div>
+<label class="text-xs text-gray-500">
+Price <span class="text-red-500">*</span>
+</label>
+<input type="number" required
+class="border p-2 rounded w-full price"
+value="${item?.price || ''}">
+</div>
+
+<div>
+<label class="text-xs text-gray-500">
+Item Date <span class="text-red-500">*</span>
+</label>
+<input type="date" required
+class="border p-2 rounded w-full itemDate"
+value="${item?.date || ''}">
+</div>
+
+<div>
+<label class="text-xs text-gray-500">Total</label>
+<input readonly
+class="border p-2 rounded w-full total bg-gray-50">
+</div>
+
+</div>
+
+<div class="flex justify-end mt-3">
+<button onclick="removeRow(this)"
+class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">
+<i class="bi bi-trash"></i>
+</button>
+</div>
+
+`;
+container.appendChild(row);
+
+row.querySelector(".item").focus();
+
+calculateTotal();
+
+}
+
+/* REMOVE ROW */
+
+function removeRow(btn){
+
+const rows=document.querySelectorAll("#items > div");
+
+if(rows.length===1){
+alert("At least one item is required");
+return;
+}
+
+btn.parentElement.parentElement.remove();
+calculateTotal();
+
+}
+
+/* CALCULATE TOTAL */
+
+document.addEventListener("input",calculateTotal);
+
+function calculateTotal(){
+
+const rows=document.querySelectorAll("#items > div");
+
+let grandTotal=0;
+
+rows.forEach(r=>{
+
+const qty=parseFloat(r.querySelector(".qty").value) || 0;
+const price=parseFloat(r.querySelector(".price").value) || 0;
+
+const total=qty*price;
+
+r.querySelector(".total").value=total;
+grandTotal+=total;
+
+});
+
+document.getElementById("grandTotal").textContent=grandTotal;
+
+}
+
+/* SAVE BILL */
+
+function saveBill(){
+
+const customer=document.getElementById("customer").value;
+
+if(!customer){
+alert("Select customer");
+return;
+}
+
+const rows=document.querySelectorAll("#items > div");
+
+const items=[];
+
+rows.forEach(r=>{
+
+const item=r.querySelector(".item").value.trim();
+const qty=parseFloat(r.querySelector(".qty").value) || 0;
+const price=parseFloat(r.querySelector(".price").value) || 0;
+const date=r.querySelector(".itemDate").value;
+
+if(!item || !qty || !price || !date){
+
+alert("Please fill all item fields");
+
+throw "stop";
+
+}
+
+items.push({
+item,
+qty,
+price,
+date,
+total:qty*price
+});
+});
+
+if(items.length===0){
+alert("Add items");
+return;
+}
+
+const total=items.reduce((s,i)=>s+i.total,0);
+
+
+/* ========================= */
+/* EDIT MODE FIX */
+/* ========================= */
+
+if(editingBillId !== null){
+
+const index=bills.findIndex(b=>b.id===editingBillId);
+
+if(index !== -1){
+
+bills[index].customer=customer;
+bills[index].items=items;
+bills[index].total=total;
+bills[index].date=new Date().toLocaleDateString();
+
+}
+
+editingBillId=null;
+
+showMessage("Bill Updated");
+
+}
+
+/* ========================= */
+/* NORMAL SAVE MODE */
+/* ========================= */
+
+else{
+
+const existingBill=bills.find(b=>b.customer===customer);
+
+if(existingBill){
+
+existingBill.items =
+existingBill.items.concat(items);
+
+existingBill.total =
+Number(existingBill.total) + Number(total);
+
+existingBill.date=
+new Date().toLocaleDateString();
+
+showMessage("Existing Bill Amount Added");
+
+}
+
+else{
+
+const lastBillNo =
+bills.length > 0
+? bills[bills.length - 1].billNo
+: null;
+
+let newNumber = 1;
+
+if(lastBillNo){
+
+newNumber =
+parseInt(lastBillNo.replace("RE-","")) + 1;
+
+}
+
+const formattedBillNo =
+"RE-" + String(newNumber).padStart(3,"0");
+
+
+bills.push({
+id:Date.now(),
+billNo:formattedBillNo,
+customer,
+items,
+total,
+date:new Date().toLocaleDateString()
+});
+
+showMessage("New Bill Saved");
+
+}
+
+}
+
+localStorage.setItem("bills",JSON.stringify(bills));
+
+displayBills();
+clearForm();
+
+}
+/* EDIT BILL */
+
+
+function editBill(id){
+
+const bill=bills.find(b=>b.id===id);
+
+editingBillId=id;
+
+document.getElementById("customer").value=bill.customer;
+document.getElementById("items").innerHTML="";
+
+bill.items.forEach(i=>addItemRow(i));
+
+calculateTotal();
+
+}
+
+/* PDF */
+
+function downloadPDF(id){
+
+const bill = bills.find(b=>b.id===id);
+
+const { jsPDF } = window.jspdf;
+
+const doc = new jsPDF();
+
+/* HEADER */
+
+doc.setFontSize(18);
+doc.text("Rani Electrical",14,10);
+
+doc.setFontSize(10);
+doc.text("Electrical & Hardware",14,16);
+doc.text("Phone : 9380152010",14,21);
+
+doc.line(14,24,195,24);
+
+
+/* INVOICE BELOW PHONE */
+
+doc.setFontSize(16);
+doc.text("Invoice",14,32);
+
+
+/* CUSTOMER DETAILS */
+
+doc.setFontSize(12);
+
+doc.text("Customer : "+bill.customer,14,42);
+doc.text("Date : "+bill.date,14,49);
+
+
+/* TABLE */
+
+doc.autoTable({
+
+startY:60,
+
+head:[[
+"Item Description",
+"Qty",
+"Item Date",
+"Unit Price",
+"Total Amount"
+]],
+
+body: bill.items.map(i=>[
+i.item,
+i.qty,
+i.date,
+"Rs. " + Number(i.price).toLocaleString("en-IN"),
+"Rs. " + Number(i.total).toLocaleString("en-IN")
+]),
+
+theme:"grid",
+
+headStyles:{
+fillColor:[79,70,229],
+textColor:255,
+halign:"center"
+},
+
+styles:{
+fontSize:11
+},
+
+columnStyles:{
+0:{cellWidth:45},
+1:{cellWidth:20, halign:"center"},
+2:{cellWidth:35},
+3:{cellWidth:35},
+4:{cellWidth:35}
+}
+
+});
+
+
+/* GRAND TOTAL RIGHT + GREEN */
+
+const y = doc.lastAutoTable.finalY + 12;
+
+doc.setFontSize(13);
+
+doc.setTextColor(0,0,0);
+
+doc.text(
+"Grand Total :",
+150,
+y
+);
+
+doc.setTextColor(0,120,0);
+
+doc.text(
+"Rs. " + Number(bill.total).toLocaleString("en-IN"),
+195,
+y,
+{ align:"right" }
+);
+
+doc.setTextColor(0,0,0);
+
+doc.save("Bill_"+bill.customer+".pdf");
+
+}
+/* CLEAR FORM */
+
+function clearForm(){
+
+document.getElementById("customer").value="";
+document.getElementById("items").innerHTML="";
+document.getElementById("grandTotal").textContent="0";
+
+addItemRow();
+
+}
+
+/* DISPLAY BILLS */
+
+function displayBills(){
+
+const table=document.getElementById("billTable");
+table.innerHTML="";
+
+bills.forEach(b=>{
+
+table.innerHTML+=`
+
+<tr class="border-b">
+
+<td class="p-3">${b.billNo || "-"}</td>
+<td class="p-3">${b.date}</td>
+<td class="p-3">${b.customer}</td>
+
+<td class="p-3 font-semibold text-green-600">
+₹${Number(b.total).toLocaleString()}
+</td>
+
+<td class="p-3 text-center space-x-3">
+
+<button onclick="editBill(${b.id})" class="text-blue-600 text-lg">
+<i class="bi bi-pencil-square"></i>
+</button>
+
+<button onclick="downloadPDF(${b.id})" class="text-green-600 text-lg">
+<i class="bi bi-file-earmark-pdf"></i>
+</button>
+
+<button onclick="deleteBill(${b.id})" class="text-red-500 text-lg">
+<i class="bi bi-trash"></i>
+</button>
+
+</td>
+
+</tr>
+
+`;
+
+});
+
+}
+
+/* DELETE */
+
+function deleteBill(id){
+
+if(!confirm("Delete this bill ?")) return;
+
+bills=bills.filter(b=>b.id!==id);
+localStorage.setItem("bills",JSON.stringify(bills));
+displayBills();
+
+}
+
+/* MESSAGE */
+
+function showMessage(text){
+
+const msg=document.getElementById("message");
+const msgText=document.getElementById("messageText");
+
+msgText.textContent=text;
+
+msg.classList.remove("hidden");
+
+msg.classList.add("animate-fade");
+
+setTimeout(()=>{
+
+msg.classList.add("hidden");
+
+},2000);
+
+}
+
+displayBills();
+loadCustomers();
+addItemRow();
+
+
+document.addEventListener("keydown",function(e){
+
+if(e.key==="Enter"){
+
+e.preventDefault();
+
+const inputs=[...document.querySelectorAll("input")];
+
+const index=inputs.indexOf(document.activeElement);
+
+if(index>-1 && index<inputs.length-1){
+inputs[index+1].focus();
+}
+
+}
+
+});
+
+</script>
+
+</body>
+</html>
