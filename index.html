@@ -661,22 +661,31 @@ table.innerHTML+=`
 ₹${Number(b.total).toLocaleString()}
 </td>
 
-<td class="p-3 text-center space-x-3">
+<td class="p-3">
 
-<button onclick="editBill(${b.id})" class="text-blue-600 text-lg">
+<div class="flex justify-center gap-1">
+
+<button 
+onclick="editBill(${b.id})"
+class="bg-blue-500 text-white w-8 h-8 rounded flex items-center justify-center">
 <i class="bi bi-pencil-square"></i>
 </button>
 
-<button onclick="downloadPDF(${b.id})" class="text-green-600 text-lg">
+<button 
+onclick="downloadPDF(${b.id})"
+class="bg-green-600 text-white w-8 h-8 rounded flex items-center justify-center">
 <i class="bi bi-file-earmark-pdf"></i>
 </button>
 
-<button onclick="deleteBill(${b.id})" class="text-red-500 text-lg">
+<button 
+onclick="deleteBill(${b.id})"
+class="bg-red-500 text-white w-8 h-8 rounded flex items-center justify-center">
 <i class="bi bi-trash"></i>
 </button>
 
-</td>
+</div>
 
+</td>
 </tr>
 
 `;
@@ -684,6 +693,7 @@ table.innerHTML+=`
 });
 
 }
+
 
 /* DELETE */
 
@@ -744,4 +754,5 @@ inputs[index+1].focus();
 </script>
 
 </body>
+
 </html>
